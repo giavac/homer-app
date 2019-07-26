@@ -18,7 +18,7 @@ export default function dashboards(server) {
         strategy: 'token',
       },
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       let userObject = request.auth.credentials;
       
       console.log(userObject);
@@ -31,11 +31,11 @@ export default function dashboards(server) {
       settings.getDashboard(table, ['id', 'username', 'partid', 'category', 'param', 'create_date', 'data'], dashboardId)
         .then(function(data) {
           if (!data) {
-            return reply(Boom.notFound('dashboard was not found'));
+            return h.response(Boom.notFound('dashboard was not found'));
           }
-          return reply(data.data);
+          return h.response(data.data);
         }).catch(function(error) {
-          return reply(Boom.serverUnavailable(error));
+          return h.response(Boom.serverUnavailable(error));
         });
     },
   });
@@ -55,7 +55,7 @@ export default function dashboards(server) {
         strategy: 'token',
       },
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       let userObject = request.auth.credentials;
       const settings = new Settings(server, userObject.username);
 
@@ -64,11 +64,11 @@ export default function dashboards(server) {
       settings.getDashboardList(table, ['id', 'username', 'partid', 'category', 'param', 'create_date', 'data'])
         .then(function(data) {
           if (!data) {
-            return reply(Boom.notFound('dashboard was not found'));
+            return h.response(Boom.notFound('dashboard was not found'));
           }
-          return reply(data);
+          return h.response(data);
         }).catch(function(error) {
-          return reply(Boom.serverUnavailable(error));
+          return h.response(Boom.serverUnavailable(error));
         });
     },
   });
@@ -82,7 +82,7 @@ export default function dashboards(server) {
         strategy: 'token',
       },
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       let userObject = request.auth.credentials;
       const settings = new Settings(server, userObject.username);
 
@@ -101,11 +101,11 @@ export default function dashboards(server) {
       settings.insertDashboard(table, dashboardId, newBoard)
         .then(function(data) {
           if (!data) {
-            return reply(Boom.notFound('dashboard was not found'));
+            return h.response(Boom.notFound('dashboard was not found'));
           }
-          return reply(data);
+          return h.response(data);
         }).catch(function(error) {
-          return reply(Boom.serverUnavailable(error));
+          return h.response(Boom.serverUnavailable(error));
         });
     },
   });
@@ -119,7 +119,7 @@ export default function dashboards(server) {
         strategy: 'token',
       },
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       let userObject = request.auth.credentials;
       const settings = new Settings(server, userObject.username);
       let dashboardId = encodeURIComponent(request.params.dashboardId);
@@ -128,11 +128,11 @@ export default function dashboards(server) {
       settings.deleteDashboard(table, dashboardId)
         .then(function(data) {
           if (!data) {
-            return reply(Boom.notFound('dashboard was not found'));
+            return h.response(Boom.notFound('dashboard was not found'));
           }
-          return reply(data);
+          return h.response(data);
         }).catch(function(error) {
-          return reply(Boom.serverUnavailable(error));
+          return h.response(Boom.serverUnavailable(error));
         });
     },
   });
@@ -146,7 +146,7 @@ export default function dashboards(server) {
         strategy: 'token',
       },
     },
-    handler: function(request, reply) {
+    handler: function(request, h) {
       let userObject = request.auth.credentials;
       const settings = new Settings(server, userObject.username);
       // let dashboardId = encodeURIComponent(request.params.dashboardId);
@@ -155,11 +155,11 @@ export default function dashboards(server) {
       settings.getDashboardList(table, ['id', 'username', 'partid', 'category', 'param', 'create_date', 'data'])
         .then(function(data) {
           if (!data) {
-            return reply(Boom.notFound('dashboard was not found'));
+            return h.response(Boom.notFound('dashboard was not found'));
           }
-          return reply(data);
+          return h.response(data);
         }).catch(function(error) {
-          return reply(Boom.serverUnavailable(error));
+          return h.response(Boom.serverUnavailable(error));
         });
     },
   });

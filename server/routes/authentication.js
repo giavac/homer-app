@@ -20,6 +20,9 @@ export default function auth(server) {
     path: '/api/v3/auth',
     method: 'POST',
     config: {
+      description: 'Authetication',
+      notes: 'make jwt auth ',
+      tags: ['api'], // ADD THIS TAG
       validate: {
         payload: {
           username: Joi.string().min(2).max(50).required(),
@@ -27,7 +30,7 @@ export default function auth(server) {
         },
       },
     },
-    handler: async function(request, reply) {
+    handler: async function(request, h) {
       const {username, password} = request.payload;      
       let user;
       
@@ -43,38 +46,36 @@ export default function auth(server) {
                 algorithm: jwtSettings.algorithm,
                 expiresIn: jwtSettings.expires_in,
              });                          
-             return reply({token, scope: response.guid,});
+             return h.response({token, scope: response.guid,});
           } else {
-              return reply(Boom.unauthorized('incorrect password'));
+              return h.response(Boom.unauthorized('incorrect password'));
           }
       }	
       /* default internal */
       else {
           user = new User({server, username});
-          user.get(['guid', 'hash']).then(function(user) {
-      
-              if (!user) {
-                    return reply(Boom.notFound('the user was not found'));
-              }
+          
+          const userData = await user.get(['guid', 'hash']);
+          
+          console.log("USERDATA", userData);
+          
+          if (!userData) {
+                    return h.response(Boom.notFound('the user was not found'));
+          }
 
-              return bcrypt.compare(password, user.hash).then(function(isCorrect) {
+          return bcrypt.compare(password, userData.hash).then(function(isCorrect) {
                       if (isCorrect) {
-                          const token = jwt.sign({username, scope: user.guid, }, jwtSettings.key, 
+                          const token = jwt.sign({username, scope: userData.guid, }, jwtSettings.key, 
                           {
                             algorithm: jwtSettings.algorithm,
                             expiresIn: jwtSettings.expires_in,
                           });
                           
-                          return reply({token, scope: user.guid,});
+                          return h.response({token, scope: userData.guid,});
                      } else {
-                            return reply(Boom.unauthorized('incorrect password'));
+                            return h.response(Boom.unauthorized('incorrect password'));
                      }
-              });
-      
-        
-          }).catch(function(error) {
-              return reply(Boom.serverUnavailable(error));
-          });
+          });      
       }
     },
   });

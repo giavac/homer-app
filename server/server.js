@@ -1,4 +1,3 @@
-import Hapi from 'hapi';
 import {forEach} from 'lodash';
 import pem from 'pem';
 import jwtSettings from './private/jwt_settings';
@@ -30,12 +29,24 @@ const databases = {
   config: config.db.type.mysql ? require('knex')(config.db.mysql.homerdatadev) : require('knex')(config.db.pgsql.homer_config),
 };
 
-const server = new Hapi.Server({
-  debug: {
-    log: ['debug', 'warn', 'error', 'implementation', 'internal'],
-    request: ['debug', 'warn', 'error', 'implementation', 'internal'],
-  },
-});
+const HapiSwagger = require('hapi-swagger');
+const Pack = require('../package');
+
+
+
+const swaggerOptions = {
+      info: {
+      		title: 'API Documentation',
+                version: Pack.version,
+      },
+};
+
+const Hapi = require('@hapi/hapi');
+const H2o2 = require('@hapi/h2o2');
+const AuthJwt2 = require('hapi-auth-jwt2');  
+const Inert = require('@hapi/inert');
+const Vision = require('@hapi/vision');
+                 
 
 const Influx = require('influx');
 const influx = new Influx.InfluxDB({
@@ -54,74 +65,73 @@ const prometheusClient = new RequestClient({
 
 databases.prometheus = prometheusClient;
 
-pem.createCertificate({
-  days: config.certificate.days,
-  selfSigned: config.certificate.self_signed,
-}, function(error, keys) {
-  if (error) {
-    throw error;
-  }
-
-  const tls = {
-    key: keys.serviceKey,
-    cert: keys.certificate,
-  };
-
-  server.connection({
+const server = new Hapi.Server({
     host: config.http_host || '127.0.0.1',
-    port: config.http_port || 8001,
-  });
+    port: config.http_port || 8001,      
+    debug: {
+            log: ['debug', 'warn', 'error', 'implementation', 'internal'],
+            request: ['debug', 'warn', 'error', 'implementation', 'internal'],
+    },
+});
 
-  server.connection({
-    host: config.https_host || '127.0.0.1',
-    port: config.https_port || 443,
-    tls,
-  });
+// bring your own validation function
+const validate = async function (decoded, request) {
 
-  // JWT authentication and encryption
-  server.register([
-    require('h2o2'),
-    require('hapi-auth-jwt'),
-    require('inject-then'),
-    require('inert'),
-  ], function(error) {
-    if (error) {
-      console.log('Error was handled!');
-      console.log(error);
+    // do your checks to see if the person is valid
+    /*if (!people[decoded.id]) {
+        return { isValid: false };
     }
+    else {
+        return { isValid: true };
+    }*/
+    return { isValid: true };            
+};
 
+(async () => {
+
+
+
+    // JWT authentication and encryption
+    await server.register([
+            H2o2,
+            AuthJwt2, 
+            Inert, 
+            Vision,
+            {
+                plugin: HapiSwagger,
+                options: swaggerOptions
+            }
+    ]);
+        
     server.auth.strategy('token', 'jwt', {
-      key: jwtSettings.key, // the JWT private key
-      verifyOptions: {
-        algorithms: [jwtSettings.algorithm],
-      },
+            key: jwtSettings.key, // the JWT private key
+            validate: validate,  // validate function defined above                
+            verifyOptions: {
+                algorithms: [jwtSettings.algorithm],
+            },
     });
+
+   // server.auth.default('jwt');  
 
     server.databases = databases;
 
     // Initialize routes
     forEach(routes, function(routeSet) {
-      if (routeSet.default.name === 'proxy') { // temporary, to be deleted when the new API is ready
-        routeSet.default(server, proxyConfig);
-      } else {
-        routeSet.default(server);
-      }
+            if (routeSet.default.name === 'proxy') { // temporary, to be deleted when the new API is ready
+                    routeSet.default(server, proxyConfig);
+            } else {
+                    routeSet.default(server);
+            }
     });
-  });
-
-  // Server start
-  server.start(function(error) {
-    if (error) {
-      console.log('Error was handled!');
-      console.log(error);
+          
+    try {
+        await server.start();
+        console.log('Server running at:', server.info.uri);
+    } catch(err) {
+        console.log(err);
     }
+        
+})();
 
-    if (server.info) {
-      console.log(`Server started at ${server.info.uri}`);
-    } else {
-      console.log('Server started');
-    }
-  });
-});
 
 export default server;
